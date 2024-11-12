@@ -1,0 +1,97 @@
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+from datetime import datetime
+
+# Define device types and their support timelines (years from purchase)
+devices = {
+    "Apple Computers": 5,
+    "iPads": 5,
+    "Monitors": 6,
+    "Consumables": 2,
+    "Projectors": 4,
+    "Audio Visual Equipment": 5,
+    "Printers": 4
+}
+
+# Replacement Schedule Information
+replacement_schedule = {
+    "Apple Computers": "Replace every 5 years based on Apple’s average software update cycle.",
+    "iPads": "Replace every 5 years, aligned with Apple's device update policy.",
+    "Monitors": "Replace every 6 years or when display quality is inadequate.",
+    "Consumables": "Replace every 2 years due to high wear and low support requirements.",
+    "Projectors": "Replace every 4 years or sooner if replacement parts become unavailable.",
+    "Audio Visual Equipment": "Replace every 5 years or as compatibility and quality needs change.",
+    "Printers": "Replace every 4 years or per contract requirements."
+}
+
+# Flowchart Explanation for Replacement Process
+flowchart_steps = """
+1. **Annual Device Review**:
+    - Confirm device functionality and support status.
+2. **Assess Support Status**:
+    - Is the device still within the support period? Check manufacturer support timelines.
+3. **Evaluate Maintenance Cost vs Replacement Cost**:
+    - If the annual maintenance cost exceeds 30% of the replacement cost, consider replacing.
+4. **Make Replacement Decision**:
+    - If unsupported, recommend replacement.
+    - If nearing end of support, plan for replacement within the next year.
+"""
+
+# Current year to simulate device age
+current_year = datetime.now().year
+
+# Sidebar for device selection and schedule display
+st.sidebar.header("Device Life Cycle Based on Manufacturer Support")
+st.sidebar.subheader("Replacement Schedule")
+for device, schedule in replacement_schedule.items():
+    st.sidebar.markdown(f"**{device}:** {schedule}")
+
+st.sidebar.subheader("Replacement Flowchart")
+st.sidebar.markdown(flowchart_steps)
+
+# Device selection and purchase year
+selected_device = st.sidebar.selectbox("Select Device Type", list(devices.keys()))
+support_lifetime = devices[selected_device]
+purchase_year = st.sidebar.slider("Select Purchase Year", min_value=current_year - 10, max_value=current_year, value=current_year - 3)
+
+# Calculate support end year and status
+support_end_year = purchase_year + support_lifetime
+years_since_purchase = current_year - purchase_year
+years_until_end_of_support = max(0, support_end_year - current_year)
+
+# Determine support status
+if current_year > support_end_year:
+    support_status = "Unsupported"
+    color = "red"
+elif years_until_end_of_support <= 1:
+    support_status = "Nearing End of Support"
+    color = "orange"
+else:
+    support_status = "Supported"
+    color = "green"
+
+# Main Display for Device Status
+st.header(f"{selected_device} Lifecycle Replacement Dashboard")
+st.subheader("Manufacturer Support Status")
+st.write(f"**Support Status:** {support_status}")
+st.write(f"**Years Since Purchase:** {years_since_purchase}")
+st.write(f"**End of Support Year:** {support_end_year}")
+
+# Support Timeline Chart
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=[purchase_year, support_end_year], y=[100, 0], mode='lines+markers',
+                         line=dict(color=color, width=4), name=selected_device))
+fig.update_layout(title=f"{selected_device} Support Timeline", xaxis_title="Year", yaxis_title="Support Level (%)",
+                  xaxis=dict(range=[purchase_year - 1, support_end_year + 1]), yaxis=dict(range=[0, 100]))
+
+st.plotly_chart(fig)
+
+# Replacement Recommendation
+st.header("Replacement Recommendation")
+if support_status == "Unsupported":
+    st.write("**Recommendation:** Immediate replacement is advised as this device no longer receives updates.")
+elif support_status == "Nearing End of Support":
+    st.write("**Recommendation:** Consider planning for replacement within the next year.")
+else:
+    st.write("**Recommendation:** Device is currently supported. Replacement is optional, but planning for the next lifecycle phase is recommended.")
